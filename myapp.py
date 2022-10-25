@@ -84,7 +84,7 @@ class Post(Message):
         self.Url = self.xml.find("Url").text if 'Url' in attributes else '抱歉，暂未支持此消息。'
         self.Recognition = self.xml.find("Recognition").text if 'Recognition' in attributes else '抱歉，暂未支持此消息。'
         
-        log.RUNNLOG("Receive type: {0}, user: {1}".format(self.MsgType, self.ToUserName))
+        log.RUNNLOG("Receive {0}, type: {1}, user: {2}".format(self.Content, self.MsgType, self.ToUserName))
 
 class Reply(Post):
     def __init__(self, req):
@@ -115,12 +115,11 @@ class Reply(Post):
         return response
 
 
-
 def lst2msg(lst):
     res = ""
-    for name, date, is_zh:
+    for name, date, is_zh in lst:
         is_zh_msg = "旧历" if is_zh else "新历"
-        res += "%s, %s, %s\n" % (name, date, is_zh)
+        res += "%s, %s, %s\n" % (name, date, is_zh_msg)
     return res
 
 
@@ -138,25 +137,24 @@ def wechat():
     elif request.method == "POST":
         message = Reply(request)
         user_id = message.ToUserName
-        lst = message.split("-")
+        lst = message.Content.split("-")
         if lst[0] == "增加":
             name = lst[1]
             date = lst[2]
             is_zh = bool(lst[3])
             if not name or not date:
                 res_msg = "输入错误"
-            lst = db.manage.set(user_id, name, date, is_zh)
-            res_msg = "增加成功!\n" + reslst2msg(lst)
+            else:
+                lst = db.manage.set(user_id, name, date, is_zh)
+                res_msg = "增加成功!\n" + lst2msg(lst)
         elif lst[0] == "删除":
             res_msg = "删除"
         elif lst[0] == "查询":
-            pass
+            res_lst = db.manage.get_all(user_id)
+            res_msg = lst2msg(res_lst)
         else:
             res_msg = "请重新输入"
-         
-        
-        
-        message.text(message.Content)
+        message.text(res_msg)
         return message.reply()
 
 
